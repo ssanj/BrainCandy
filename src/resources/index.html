@@ -1,0 +1,225 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Quotes</title>
+  <meta name="description" content="Quotes">
+  <meta name="author" content="Sanjiv Sahayam">
+  <link href='http://fonts.googleapis.com/css?family=Nixie+One' rel='stylesheet' type='text/css'>
+  <style>
+      #quote_container {
+        font-family: 'Nixie One', cursive;
+        color: black;
+        width: 960px;
+        margin: auto;
+        margin-top: 10%;
+        text-align: center;
+      }
+
+      .quote {
+        font-size: 96px;
+      }
+
+      .quote_para {
+       font-size: 64px;
+      }
+
+      .attribution {
+        font-size: 16px;
+        color: gray;
+        text-align: center;
+        padding-top: 40px;
+      }
+
+      #controls {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      input[type=button] {
+        padding:10px; background:#ccc; border:0 none;
+        cursor:pointer;
+        -webkit-border-radius: 5px;
+        border-radius: 5px;
+      }
+
+      .hidden {
+        opacity: 0;
+      }
+
+      .hide {
+        display: none;
+      }
+
+      .animate {
+        transition: opacity 1s linear;
+      }
+
+      .visible {
+        opacity:  100;
+      }
+
+      .hideForLineHeight {
+        visibility: hidden;
+      }
+
+      .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+      }
+
+      .alert-error {
+        color: #a94442;
+        background-color: #f2dede;
+        border-color: #ebccd1;
+      }
+
+      #ajaxContainer {
+        width: 50px;
+        height: 66px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+      }
+  </style>
+
+
+  <!--[if lt IE 9]>
+      <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+    <div id="quote_container">
+        <div id="error" class="alert alert-error hidden"></div>
+        <div id="quote" class=""></div>
+        <div id="attribution" class="attribution"></div>
+    </div>
+    <script src="/resources/js/jquery-2.1.1.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var quoteEl = document.getElementById("quote"),
+            attributionEl = document.getElementById("attribution"),
+            errorEl = document.getElementById("error");
+
+        addEventListeners();
+
+        getNextQuote();
+
+        function addEventListeners() {
+          quoteEl.addEventListener('mouseover', function(){
+              if (!attributionEl.classList.contains('visible')) {
+                attributionEl.classList.add('animate');
+                attributionEl.classList.remove('invisible');
+                attributionEl.classList.add('visible');
+              }
+          }, false);
+        }
+
+        function showLoadingImage() {
+            var container = document.getElementById('quote_container');
+            var ajaxContainer = document.createElement('div');
+
+            var img = document.createElement('img');
+            img.setAttribute('width', '50');
+            img.setAttribute('height', '66');
+            img.setAttribute('src', '/resources/images/wifi.gif');
+
+            ajaxContainer.setAttribute('id', 'ajaxContainer');
+            ajaxContainer.appendChild(img);
+
+            document.body.insertBefore(ajaxContainer, container)
+        }
+
+        function hideLoadingImage() {
+              var container = document.getElementById('ajaxContainer');
+              if (container) {
+                container.classList.add('hide');
+              }
+        }
+
+        function removeLoadingImage() {
+              var container = document.getElementById('ajaxContainer');
+              if (container && container.parentNode) {
+                container.parentNode.removeChild(container);
+              }
+        }
+
+        function getNextQuote() {
+          $.ajax({
+            url: "/quote",
+            dataType: "json",
+
+            beforeSend: showLoadingImage,
+
+            success: function(data) {
+              hideLoadingImage();
+              if (!data.error) {
+                renderQuoteItem(data);
+              } else {
+                displayErrorMessage(data.error);
+              }
+            },
+            error: function(request, status, message) {
+              displayErrorMessage("Error retrieving quote. Status: " + status + ", error message: " + message);
+            },
+
+            complete: removeLoadingImage
+          });
+        }
+
+        function displayErrorMessage(errorMessage) {
+          errorEl.textContent = "Could not retrieve quote. Please see your browser log for details.";
+          errorEl.classList.add('animate');
+          errorEl.classList.remove('hidden');
+
+          if (console && console.log) {
+            console.log(errorMessage);
+          }
+        }
+
+        function renderQuoteItem(quoteItem) {
+            clearQuoteClasses();
+            clearAttributionClasses();
+
+            var lineCount = getLineCount(quoteItem.quote);
+
+            quoteEl.classList.add((lineCount > 4) ? "quote_para" : "quote");
+            attributionEl.classList.add('hidden');
+
+            quoteEl.textContent = quoteItem.quote;
+            attributionEl.textContent = quoteItem.attribution;
+        }
+
+        function getLineCount(quote) {
+            quoteEl.classList.add("hideForLineHeight");
+            quoteEl.classList.add("quote");
+            quoteEl.textContent  = quote;
+
+            var fontSize   = document.defaultView.getComputedStyle(quoteEl, null).getPropertyValue("font-size");
+            //remove 'px' and convert to int. Multiply by a constant factor.
+            var lineHeight = parseInt(fontSize.substring(0, fontSize.length - 2)) * 1.13;
+            var divHeight  = quoteEl.offsetHeight
+            var lineCount  = Math.ceil(divHeight / lineHeight);
+
+            quoteEl.classList.remove("quote");
+            quoteEl.classList.remove("hideForLineHeight");
+
+            return lineCount;
+        }
+
+        function clearQuoteClasses() {
+            quoteEl.classList.remove("quote");
+            quoteEl.classList.remove("quote_para");
+        }
+
+        function clearAttributionClasses() {
+            attributionEl.classList.remove('hidden');
+            attributionEl.classList.remove('visible');
+        }
+    </script>
+</body>
+</html>
